@@ -65,11 +65,11 @@ services:
     ports:
       - '${REDIS_PORT}:${REDIS_PORT}'
     command: redis-server --port ${REDIS_PORT}
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli --port ${REDIS_PORT} ping | grep PONG" ]
-      interval: 10s
-      timeout: 1s
-      retries: 5
+#    healthcheck:
+#      test: [ "CMD-SHELL", "redis-cli --port ${REDIS_PORT} ping | grep PONG" ]
+#      interval: 10s
+#      timeout: 1s
+#      retries: 5
     volumes:
       - ./.volumes/redis:/data
     networks:
@@ -78,8 +78,8 @@ services:
   sms_produce_celery:
     build: .
     command: poetry run celery --app=sms_produce worker --loglevel=info --logfile=/app/logs/celery_worker.log
-    depends_on:
-      - sms_produce_redis
+#    depends_on:
+#      - sms_produce_redis
     env_file:
       - .env
     volumes:
@@ -90,8 +90,8 @@ services:
   sms_produce_celery_beat:
     build: .
     command: poetry run celery --app=sms_produce beat --loglevel=info --logfile=logs/celery_worker.log --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    depends_on:
-      - sms_produce_redis
+#    depends_on:
+#      - sms_produce_redis
     env_file:
       - .env
     volumes:
