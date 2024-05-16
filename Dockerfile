@@ -16,5 +16,6 @@ RUN poetry install --no-root --no-dev
 WORKDIR /app
 COPY . .
 
+RUN mkdir -p /app/logs
 CMD ["poetry", "run", "python", "manage.py", "collectstatic", "--noinput"]
 CMD ["poetry", "run", "gunicorn", "sms_produce.wsgi", "-b", "0.0.0.0:8000"]
