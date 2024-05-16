@@ -1,0 +1,103 @@
+version: "3.8"
+
+services:
+  sms_produce_database:
+    image: postgres:15-alpine
+    volumes:
+     - .volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 1s
+      retries: 5
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    networks:
+      - sms-network
+
+  sms_produce_web:
+    build:
+      context: .
+    depends_on:
+      sms_produce_database:
+        condition: service_healthy
+      sms_produce_redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .volumes/logs:/app/logs/
+#    healthcheck:
+#      test: "curl --fail http://127.0.0.1:8000/healthcheck"
+#      interval: 60s
+#      timeout: 1s
+#      retries: 10
+#    command:
+#      - "gunicorn"
+#      - "--bind"
+#      - ":${APP_PORT}"
+#      - "--workers"
+#      - "${WORKER_COUNT}"
+#      - "sms_produce.wsgi:application"
+    networks:
+      - sms-network
+
+  sms_produce_migration:
+    build:
+      context: .
+    depends_on:
+      sms_produce_database:
+        condition: service_healthy
+#      sms_produce_web:
+#        condition: service_healthy
+    env_file:
+      - .env
+    command: 'poetry run python manage.py migrate'
+    networks:
+      - sms-network
+
+  sms_produce_redis:
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 10s
+      timeout: 1s
+      retries: 5
+    volumes:
+      - ./.volumes/redis:/data
+    networks:
+      - sms-network
+
+  sms_produce_celery:
+    build: .
+    command: poetry run celery --app=sms_produce worker --loglevel=info --logfile=/app/logs/celery_worker.log
+    depends_on:
+      - sms_produce_redis
+    env_file:
+      - .env
+    volumes:
+      - .volumes/logs:/app/logs/
+    networks:
+      - sms-network
+
+  sms_produce_celery_beat:
+    build: .
+    command: poetry run celery --app=sms_produce beat --loglevel=info --logfile=logs/celery_worker.log --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - sms_produce_redis
+    env_file:
+      - .env
+    volumes:
+      - .volumes/logs:/app/logs/
+    networks:
+      - sms-network
+
+networks:
+  sms-network:
+    driver: bridge
