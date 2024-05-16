@@ -12,7 +12,7 @@ class TextAdmin(admin.ModelAdmin):
 
 
 class BroadcastAdmin(admin.ModelAdmin):
-    readonly_fields = ['run_count']
+    readonly_fields = ['run_count', 'sent_sms']
     list_display = [
         'id',
         'name',
@@ -22,8 +22,6 @@ class BroadcastAdmin(admin.ModelAdmin):
         'total_sms_count',
         'start_date',
         'end_date',
-        'channel_login',
-        'channel_password',
         'run_count',
         'sent_sms',
     ]
