@@ -24,5 +24,5 @@ class Client:
         }
         resp = await self.client.post(url='', data=payload)
 
-        # resp.raise_for_status()
+        resp.raise_for_status()
         return resp.status_code
