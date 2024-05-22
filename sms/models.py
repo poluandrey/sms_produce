@@ -49,7 +49,7 @@ class Broadcast(models.Model):
             business_minutes = 60 - current_date.minute
             current_date += timedelta(hours=1)
             current_date = current_date.replace(minute=0)
-        while current_date < datetime.combine(self.end_date, time(23, 59, 59)):
+        while current_date < datetime.combine(self.end_date - timedelta(days=1), time(23, 59, 59)):
             if 8 <= current_date.hour < 20:
                 business_hours += 1
             current_date += timedelta(hours=1)
