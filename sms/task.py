@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import random
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from typing import Union, Any
 
 import httpx
@@ -48,6 +48,7 @@ def broadcast_task_handler():
                     sender=sender,
                     text=text,
                 ))
+
         sms_tasks.append(BroadcastTask(id=broadcast.id, sms_pack=sms_pack))
 
         broadcast.run_count += 1
@@ -73,3 +74,9 @@ def handle_sent_result(broadcasts, sms_sent_results):
         logger.info(f'broadcast_id - {broadcast_id}; accepted_sms_count - {accepted_sms_count}')
         broadcast.sent_sms += accepted_sms_count
         broadcast.save()
+
+        if (broadcast.sent_sms >= broadcast.total_sms_count or
+            datetime.combine(broadcast.end_date - timedelta(days=1),
+                             time(23, 59, 59)) < datetime.now()):
+            broadcast.is_active = False
+            broadcast.save()

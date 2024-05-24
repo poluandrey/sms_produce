@@ -49,10 +49,13 @@ class Broadcast(models.Model):
             business_minutes = 60 - current_date.minute
             current_date += timedelta(hours=1)
             current_date = current_date.replace(minute=0)
+
         while current_date < datetime.combine(self.end_date - timedelta(days=1), time(23, 59, 59)):
             if 8 <= current_date.hour < 20:
                 business_hours += 1
+
             current_date += timedelta(hours=1)
+
         return int(business_hours * 60 + business_minutes)
 
     def calculate_sms_count_to_send(self) -> int:
@@ -64,11 +67,15 @@ class Broadcast(models.Model):
             calculated_sms_count = self.total_sms_count // remain_run_count
         else:
             calculated_sms_count = (self.total_sms_count - self.sent_sms) // remain_run_count
+
         sms_to_send = round(calculated_sms_count * random.triangular(0, 2)) if calculated_sms_count > 0 else 1
         # because of using multiple to random in sms_to_send calculation sms_to_send + self.sent_sms
-        # can be more than self.total_sms
-        if self.total_sms_count < self.sent_sms + sms_to_send:
+        # can be more or less than self.total_sms in last run
+        if remain_run_count == 1 and (
+                self.total_sms_count < self.sent_sms + sms_to_send
+                or self.total_sms_count > self.sent_sms + sms_to_send):
             sms_to_send = self.total_sms_count - self.sent_sms
+
         logger.info(f'broadcast {self.id}: calculated number of sms to send: {sms_to_send}')
         return sms_to_send
 
