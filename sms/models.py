@@ -15,7 +15,7 @@ class Sender(models.Model):
 
 
 class Text(models.Model):
-    text = models.CharField(max_length=60, unique=True)
+    text = models.CharField(max_length=145, unique=True)
 
     def __str__(self):
         return self.text
