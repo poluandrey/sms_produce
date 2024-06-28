@@ -82,4 +82,7 @@ class Broadcast(models.Model):
     def generate_phone_number(self) -> int:
         part_length = self.phone_number_length - len(str(self.prefix))
         random_part = ''.join(random.choices('0123456789', k=part_length))
+        if len(f'{self.prefix}{random_part}') < self.phone_number_length:
+            logger.error(
+                f'generated phone number len less then {self.phone_number_length}. phone - {self.prefix}{random_part}')
         return int(f'{self.prefix}{random_part}')
