@@ -44,7 +44,7 @@ def broadcast_task_handler():
             phone_number = broadcast.generate_phone_number()
             while phone_number in phone_numbers:
                 phone_number = broadcast.generate_phone_number()
-
+            phone_numbers.append(phone_number)
             sms_pack.append(
                 api_client.send_sms(
                     channel_login=broadcast.channel_login,
