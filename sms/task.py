@@ -29,9 +29,11 @@ def broadcast_task_handler():
         return
 
     api_client = SmsApiClient(client=client)
+
     sms_tasks = []
     total_sms_sms_to_send = 0
     for broadcast in broadcasts:
+        phone_numbers = []
         sms_pack = []
         sms_to_send = broadcast.calculate_sms_count_to_send()
         # logger.info(f'broadcast: {broadcast.name}; sms to send - {sms_to_send};')
@@ -40,6 +42,9 @@ def broadcast_task_handler():
             text = random.choice(broadcast.text.all())
             sender = random.choice(broadcast.sender.all())
             phone_number = broadcast.generate_phone_number()
+            while phone_number in phone_numbers:
+                phone_number = broadcast.generate_phone_number()
+
             sms_pack.append(
                 api_client.send_sms(
                     channel_login=broadcast.channel_login,
