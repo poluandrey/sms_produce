@@ -40,10 +40,10 @@ def broadcast_task_handler():
         # logger.info(f'broadcast: {broadcast.name}; sms to send - {sms_to_send};')
         total_sms_sms_to_send += sms_to_send
         for _ in range(sms_to_send):
-            prefix = random.choice(prefixes_obj.prefix)
+            prefix_obj = random.choice(prefixes_obj)
             text = random.choice(broadcast.text.all())
             sender = random.choice(broadcast.sender.all())
-            phone_number = broadcast.generate_phone_number(prefix)
+            phone_number = broadcast.generate_phone_number(prefix_obj.prefix)
             while phone_number in phone_numbers:
                 phone_number = broadcast.generate_phone_number()
             logger.debug(f'generated phone number - {phone_number}')
