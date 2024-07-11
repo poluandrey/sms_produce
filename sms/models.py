@@ -3,7 +3,6 @@ import random
 from datetime import datetime, time, timedelta
 
 from django.db import models
-from django.core.exceptions import ValidationError
 
 
 logger = logging.getLogger('app')

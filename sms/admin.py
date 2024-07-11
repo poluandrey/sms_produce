@@ -1,5 +1,3 @@
-import csv
-
 from django.contrib import admin
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
@@ -59,15 +57,10 @@ class BroadcastAdmin(admin.ModelAdmin):
                 Prefix.objects.create(broadcast=form.instance, prefix=prefix)
         super(BroadcastAdmin, self).save_related(request, form, formsets, change)
 
-
-
-
-
     class Media:
         css = {
             'all': ('css/custom_admin.css',)  # Include extra css
         }
-
 
 
 admin.site.register(Sender, SenderAdmin)
