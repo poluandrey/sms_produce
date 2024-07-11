@@ -33,14 +33,14 @@ def broadcast_task_handler():
     sms_tasks = []
     total_sms_sms_to_send = 0
     for broadcast in broadcasts:
-        prefixes = [obj.prefix for obj in broadcast.prefix.all()]
+        prefixes_obj = [obj.prefix for obj in broadcast.prefix.all()]
         phone_numbers = []
         sms_pack = []
         sms_to_send = broadcast.calculate_sms_count_to_send()
         # logger.info(f'broadcast: {broadcast.name}; sms to send - {sms_to_send};')
         total_sms_sms_to_send += sms_to_send
         for _ in range(sms_to_send):
-            prefix = random.choice(prefixes)
+            prefix = random.choice(prefixes_obj.prefix)
             text = random.choice(broadcast.text.all())
             sender = random.choice(broadcast.sender.all())
             phone_number = broadcast.generate_phone_number(prefix)
