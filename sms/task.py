@@ -69,7 +69,7 @@ def broadcast_task_handler():
 
 
 async def send_sms_pack(sms_tasks: BroadcastTask) -> tuple[int, Union[HTTPStatusError, Any]]:
-    results = await asyncio.gather(*[asyncio.create_task(task) for task in sms_tasks.sms_pack], return_exceptions=True)
+    results = await asyncio.gather(*[task for task in sms_tasks.sms_pack], return_exceptions=True)
     logger.debug(f'broadcast id - {sms_tasks.id}; result - {results}')
     return sms_tasks.id, results
 
