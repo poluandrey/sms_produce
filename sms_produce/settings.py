@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 
     "django_extensions",
     'django_celery_beat',
+    'django_admin_inline_paginator',
 
     "sms",
 ]
