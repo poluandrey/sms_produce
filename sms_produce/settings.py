@@ -86,17 +86,19 @@ TEMPLATES = [
 WSGI_APPLICATION = "sms_produce.wsgi.application"
 
 STATIC_URL = "/static/"
-STATIC_ROOT = str(BASE_DIR / "static")
+STATIC_ROOT = str(BASE_DIR / "staticfiles")
 STATICFILES_DIRS = [str(BASE_DIR / "static")]
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
 
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
+#STORAGES = {
+#    'staticfiles': {
+#        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+#    },
+#}
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 # Database
