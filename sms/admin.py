@@ -28,7 +28,7 @@ class PrefixInline(TabularInlinePaginated):
 
 
 class BroadcastAdmin(admin.ModelAdmin):
-    create_form = AddBroadcastForm
+    form = AddBroadcastForm
     readonly_fields = ['run_count', 'sent_sms']
     inlines = [PrefixInline]
 
@@ -44,10 +44,9 @@ class BroadcastAdmin(admin.ModelAdmin):
         'sent_sms',
     ]
 
-    def get_form(self, request, obj=None, change=False, **kwargs):
-        if not obj:
-            return self.create_form
-        return super(BroadcastAdmin, self).get_form(request, obj, **kwargs)
+    # def save_model(self, request, obj, form, change):
+    #     super(BroadcastAdmin, self).save_model(request, obj, form, change)
+    #     form.save_m2m()
 
     def save_related(self, request, form, formsets, change):
         prefixes = form.cleaned_data.get('prefixes')

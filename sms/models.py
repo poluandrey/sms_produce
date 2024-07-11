@@ -32,7 +32,7 @@ class Prefix(models.Model):
 
 class Broadcast(models.Model):
     name = models.CharField(unique=False, max_length=120)
-    comment = models.CharField(unique=False, max_length=200)
+    comment = models.CharField(unique=False, max_length=200, null=True, blank=True)
     is_active = models.BooleanField()
     phone_number_length = models.IntegerField()
     total_sms_count = models.IntegerField(unique=False)
@@ -88,7 +88,7 @@ class Broadcast(models.Model):
         return sms_to_send
 
     def generate_phone_number(self, prefix) -> int:
-        part_length = self.phone_number_length - len(str(self.prefix))
+        part_length = self.phone_number_length - len(str(prefix))
         random_part = ''.join(random.choices('0123456789', k=part_length))
         if len(f'{self.prefix}{random_part}') < self.phone_number_length:
             logger.error(
