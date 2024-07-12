@@ -33,17 +33,20 @@ def broadcast_task_handler():
     sms_tasks = []
     total_sms_sms_to_send = 0
     for broadcast in broadcasts:
+        prefixes = [obj.prefix for obj in broadcast.prefix.all()]
         phone_numbers = []
         sms_pack = []
         sms_to_send = broadcast.calculate_sms_count_to_send()
         # logger.info(f'broadcast: {broadcast.name}; sms to send - {sms_to_send};')
         total_sms_sms_to_send += sms_to_send
         for _ in range(sms_to_send):
+            prefix = random.choice(prefixes)
             text = random.choice(broadcast.text.all())
             sender = random.choice(broadcast.sender.all())
-            phone_number = broadcast.generate_phone_number()
+            phone_number = broadcast.generate_phone_number(prefix)
             while phone_number in phone_numbers:
-                phone_number = broadcast.generate_phone_number()
+                phone_number = broadcast.generate_phone_number(prefix)
+            logger.debug(f'generated phone number - {phone_number}')
             phone_numbers.append(phone_number)
             sms_pack.append(
                 api_client.send_sms(
@@ -66,7 +69,7 @@ def broadcast_task_handler():
 
 
 async def send_sms_pack(sms_tasks: BroadcastTask) -> tuple[int, Union[HTTPStatusError, Any]]:
-    results = await asyncio.gather(*[asyncio.create_task(task) for task in sms_tasks.sms_pack], return_exceptions=True)
+    results = await asyncio.gather(*[task for task in sms_tasks.sms_pack], return_exceptions=True)
     logger.debug(f'broadcast id - {sms_tasks.id}; result - {results}')
     return sms_tasks.id, results
 

@@ -4,6 +4,7 @@ from datetime import datetime, time, timedelta
 
 from django.db import models
 
+
 logger = logging.getLogger('app')
 
 
@@ -21,11 +22,18 @@ class Text(models.Model):
         return self.text
 
 
+class Prefix(models.Model):
+    prefix = models.BigIntegerField()
+    broadcast = models.ForeignKey('Broadcast', related_name='prefix', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.prefix)
+
+
 class Broadcast(models.Model):
     name = models.CharField(unique=False, max_length=120)
-    comment = models.CharField(unique=False, max_length=200)
+    comment = models.CharField(unique=False, max_length=200, null=True, blank=True)
     is_active = models.BooleanField()
-    prefix = models.IntegerField(unique=False)
     phone_number_length = models.IntegerField()
     total_sms_count = models.IntegerField(unique=False)
     start_date = models.DateField()
@@ -79,10 +87,10 @@ class Broadcast(models.Model):
         logger.info(f'broadcast {self.id}: calculated number of sms to send: {sms_to_send}')
         return sms_to_send
 
-    def generate_phone_number(self) -> int:
-        part_length = self.phone_number_length - len(str(self.prefix))
+    def generate_phone_number(self, prefix) -> int:
+        part_length = self.phone_number_length - len(str(prefix))
         random_part = ''.join(random.choices('0123456789', k=part_length))
         if len(f'{self.prefix}{random_part}') < self.phone_number_length:
             logger.error(
                 f'generated phone number len less then {self.phone_number_length}. phone - {self.prefix}{random_part}')
-        return int(f'{self.prefix}{random_part}')
+        return int(f'{prefix}{random_part}')
