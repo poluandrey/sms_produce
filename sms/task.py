@@ -8,6 +8,7 @@ import httpx
 from celery import shared_task
 from django.conf import settings
 from django.db.models import F, Q
+from django.core.cache import cache
 from httpx import HTTPStatusError
 
 from api.alaris.client import Client as SmsApiClient
@@ -37,16 +38,19 @@ def broadcast_task_handler():
         phone_numbers = []
         sms_pack = []
         sms_to_send = broadcast.calculate_sms_count_to_send()
-        # logger.info(f'broadcast: {broadcast.name}; sms to send - {sms_to_send};')
         total_sms_sms_to_send += sms_to_send
         for _ in range(sms_to_send):
             prefix = random.choice(prefixes)
             text = random.choice(broadcast.text.all())
             sender = random.choice(broadcast.sender.all())
             phone_number = broadcast.generate_phone_number(prefix)
-            while phone_number in phone_numbers:
+            while phone_number in phone_numbers or is_phone_already_used(broadcast.id, phone_number):
+                # TODO it is might be infinity loop!!!
                 phone_number = broadcast.generate_phone_number(prefix)
-            logger.debug(f'generated phone number - {phone_number}')
+
+            logger.debug(f'generated phone number for broadcast {broadcast.id} - {phone_number}')
+            cache_time_out = (datetime.combine(broadcast.end_date, time(00, 00, 00)) - datetime.now()).seconds
+            cache.set(f'{broadcast.id}:{phone_number}', phone_number, timeout=cache_time_out)
             phone_numbers.append(phone_number)
             sms_pack.append(
                 api_client.send_sms(
@@ -79,7 +83,10 @@ def handle_sent_result(broadcasts, sms_sent_results):
         broadcast_id, results = task
         broadcast = broadcasts.get(id=broadcast_id)
         accepted_sms_count = len([result for result in results if result == 200])
-        logger.info(f'broadcast_id - {broadcast_id}; accepted_sms_count - {accepted_sms_count}')
+        logger.info(
+            f'broadcast_id - {broadcast_id}; accepted_sms_count - {accepted_sms_count}; '
+            f'rejected_sms_count - {len(results) - accepted_sms_count}'
+        )
         broadcast.sent_sms += accepted_sms_count
         broadcast.save()
 
@@ -88,3 +95,10 @@ def handle_sent_result(broadcasts, sms_sent_results):
                              time(23, 59, 59)) < datetime.now()):
             broadcast.is_active = False
             broadcast.save()
+
+
+def is_phone_already_used(broadcast_id: int, phone_number: int) -> bool:
+    if cache.get(f'{broadcast_id}:{phone_number}'):
+        return True
+
+    return False

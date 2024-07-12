@@ -54,6 +54,7 @@ class BroadcastAdmin(admin.ModelAdmin):
         if prefixes:
             for prefix in prefixes:
                 Prefix.objects.create(broadcast=form.instance, prefix=prefix)
+
         super(BroadcastAdmin, self).save_related(request, form, formsets, change)
 
     class Media:
