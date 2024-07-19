@@ -56,14 +56,18 @@ def broadcast_task_handler():
 
 
 def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_numbers: list[int]) -> SmsParams:
+    logger.debug('start generate sms params')
     prefix = random.choice(prefixes)
     text = random.choice(broadcast.text.all())
     sender = random.choice(broadcast.sender.all())
     phone_number = broadcast.generate_phone_number(prefix)
+
     while phone_number in exists_phone_numbers or is_phone_already_used(broadcast.id, phone_number):
         # TODO it is might be infinity loop!!!
+        logger.debug('in loop')
         phone_number = broadcast.generate_phone_number(prefix)
         prefix = random.choice(prefixes)
+
     logger.debug(f'broadcast {broadcast.id}: generated phone number {phone_number}')
     return SmsParams(
         channel_login=broadcast.channel_login,
