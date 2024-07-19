@@ -64,11 +64,15 @@ def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_n
     logger.debug(prefixes)
     logger.debug(prefix)
     logger.debug(exists_phone_numbers)
+    generation_cnt = 0
     while phone_number in exists_phone_numbers or is_phone_already_used(broadcast.id, phone_number):
         # TODO it is might be infinity loop!!!
         logger.debug('in loop')
         phone_number = broadcast.generate_phone_number(prefix)
         prefix = random.choice(prefixes)
+        generation_cnt += 1
+        if generation_cnt == 10:
+            break
 
     logger.debug(f'broadcast {broadcast.id}: generated phone number {phone_number}')
     return SmsParams(
