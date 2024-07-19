@@ -1,4 +1,9 @@
 import httpx
+from httpx import HTTPStatusError
+
+import logging
+
+logger = logging.getLogger('app')
 
 
 class Client:
@@ -12,8 +17,9 @@ class Client:
             channel_password: str,
             sender: str,
             phone_number: int,
-            text: str
-    ) -> int:
+            text: str,
+            broadcast_id: int
+    ) -> tuple[int, int]:
         payload = {
             'username': channel_login,
             'password': channel_password,
@@ -23,6 +29,10 @@ class Client:
             'message': text
         }
         resp = await self.client.post(url='', data=payload)
+        # logger.debug(f'br_id: {broadcast_id}, phone_number: {phone_number}, resp: {resp}')
+        try:
+            resp.raise_for_status()
+        except HTTPStatusError as e:
+            return broadcast_id, resp.status_code
 
-        resp.raise_for_status()
-        return resp.status_code
+        return broadcast_id, resp.status_code
