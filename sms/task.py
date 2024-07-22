@@ -72,7 +72,7 @@ def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_n
         phone_number = broadcast.generate_phone_number(prefix)
         prefix = random.choice(prefixes)
         generation_cnt += 1
-        if generation_cnt == 10:
+        if generation_cnt == 20:
             logger.warning('stuck in loop')
             return
 
