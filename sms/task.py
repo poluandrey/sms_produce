@@ -3,7 +3,7 @@ import logging
 import random
 from datetime import datetime, time
 from time import sleep
-from typing import Coroutine
+from typing import Coroutine, Optional
 
 import httpx
 from celery import shared_task
@@ -41,10 +41,11 @@ def broadcast_task_handler():
             for _ in range(calculated_sms_count_in_br):
                 sms_params = generate_sms_param(prefixes=prefixes, broadcast=broadcast,
                                                 exists_phone_numbers=exists_phone_numbers)
-                exists_phone_numbers.append(sms_params.phone_number)
-                cache_time_out = (datetime.combine(broadcast.end_date, time(00, 00, 00)) - datetime.now()).seconds
-                cache.set(f'{broadcast.id}:{sms_params.phone_number}', sms_params.phone_number, timeout=cache_time_out)
-                sms_pack.append(sms_params.dict())
+                if sms_params:
+                    exists_phone_numbers.append(sms_params.phone_number)
+                    cache_time_out = (datetime.combine(broadcast.end_date, time(00, 00, 00)) - datetime.now()).seconds
+                    cache.set(f'{broadcast.id}:{sms_params.phone_number}', sms_params.phone_number, timeout=cache_time_out)
+                    sms_pack.append(sms_params.dict())
 
             sms_tasks.append(BroadcastTask(id=broadcast.id, sms_pack=sms_pack))
             broadcast.run_count += 1
@@ -61,7 +62,7 @@ def broadcast_task_handler():
         logger.error(err)
 
 
-def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_numbers: list[int]) -> SmsParams:
+def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_numbers: list[int]) -> Optional[SmsParams]:
     prefix = random.choice(prefixes)
     text = random.choice(broadcast.text.all())
     sender = random.choice(broadcast.sender.all())
@@ -73,7 +74,7 @@ def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_n
         generation_cnt += 1
         if generation_cnt == 10:
             logger.warning('stuck in loop')
-            break
+            return
 
     logger.debug(f'broadcast {broadcast.id}: generated phone number {phone_number}')
     return SmsParams(
