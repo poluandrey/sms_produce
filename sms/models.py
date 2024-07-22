@@ -88,11 +88,12 @@ class Broadcast(models.Model):
         return sms_to_send
 
     def generate_phone_number(self, prefix) -> int:
+        # logger.debug('start generate_phone_number')
         part_length = self.phone_number_length - len(str(prefix))
         random_part = ''.join(random.choices('0123456789', k=part_length))
         if len(f'{self.prefix}{random_part}') < self.phone_number_length:
             logger.error(
                 f'generated phone number len less then {self.phone_number_length}. phone - {self.prefix}{random_part}'
             )
-
+        # logger.debug('stop generate_phone_number')
         return int(f'{prefix}{random_part}')

@@ -47,8 +47,9 @@ def broadcast_task_handler():
             broadcast.save()
 
         logger.info(f'total sms to send in task - {total_sms_sms_to_send}')
-        event_loop = asyncio.get_event_loop()
+
         if sms_tasks:
+            event_loop = asyncio.get_event_loop()
             sent_result = event_loop.run_until_complete(send_sms_pack(sms_tasks))
             handle_sent_result(broadcasts, sent_result)
     except Exception as err:
@@ -56,22 +57,17 @@ def broadcast_task_handler():
 
 
 def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_numbers: list[int]) -> SmsParams:
-    logger.debug('start generate sms params')
     prefix = random.choice(prefixes)
     text = random.choice(broadcast.text.all())
     sender = random.choice(broadcast.sender.all())
     phone_number = broadcast.generate_phone_number(prefix)
-    logger.debug(prefixes)
-    logger.debug(prefix)
-    logger.debug(exists_phone_numbers)
     generation_cnt = 0
     while phone_number in exists_phone_numbers or is_phone_already_used(broadcast.id, phone_number):
-        # TODO it is might be infinity loop!!!
-        logger.debug('in loop')
         phone_number = broadcast.generate_phone_number(prefix)
         prefix = random.choice(prefixes)
         generation_cnt += 1
         if generation_cnt == 10:
+            logger.warning('stuck in loop')
             break
 
     logger.debug(f'broadcast {broadcast.id}: generated phone number {phone_number}')
@@ -116,7 +112,7 @@ async def send_sms_pack(sms_tasks: list[BroadcastTask]) -> dict[int, list[int]]:
                 responses.extend([task.result() for task in done if not task.exception()])
                 pending_tasks = list(pending)
 
-            logger.debug(f'send_sms_resp: {responses}')
+            # logger.debug(f'send_sms_resp: {responses}')
         for resp in responses:
             broadcast_id, http_status_code = resp
             if broadcast_id not in result:
