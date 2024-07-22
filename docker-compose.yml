@@ -79,7 +79,7 @@ services:
 
   sms_produce_celery:
     build: .
-    command: poetry run celery --app=sms_produce worker --loglevel=info --logfile=/app/logs/celery_worker.log
+    command: poetry run celery --app=sms_produce worker --loglevel=info --logfile=/app/logs/celery_worker.log -P gevent
 #    depends_on:
 #      - sms_produce_redis
     env_file:

@@ -22,6 +22,7 @@ pydantic = "^2.7.1"
 openpyxl = "^3.1.5"
 django-admin-inline-paginator = "^0.4.0"
 django-redis = "^5.4.0"
+gevent = "^24.2.1"
 
 
 [tool.poetry.group.test.dependencies]

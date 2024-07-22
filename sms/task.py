@@ -1,11 +1,13 @@
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta, time
+from datetime import datetime, time
+from time import sleep
 from typing import Coroutine
 
 import httpx
 from celery import shared_task
+from celery.signals import task_postrun
 from django.conf import settings
 from django.db.models import F, Q
 from django.core.cache import cache
@@ -19,10 +21,12 @@ logger = logging.getLogger('app')
 
 @shared_task()
 def broadcast_task_handler():
+    sleep(5)
     logger.info('start')
     try:
         broadcasts = Broadcast.objects.prefetch_related('text').prefetch_related('sender').filter(
-            ~Q(sent_sms=F('total_sms_count')), is_active=True, end_date__gt=datetime.now()
+            ~Q(sent_sms=F('total_sms_count')), is_active=True,
+            end_date__gt=datetime.now().replace(second=0, microsecond=0)
         )
         if not broadcasts:
             logger.warning('no broadcasts for run found')
@@ -36,7 +40,8 @@ def broadcast_task_handler():
             calculated_sms_count_in_br = broadcast.calculate_sms_count_to_send()
             total_sms_sms_to_send += calculated_sms_count_in_br
             for _ in range(calculated_sms_count_in_br):
-                sms_params = generate_sms_param(prefixes=prefixes, broadcast=broadcast, exists_phone_numbers=exists_phone_numbers)
+                sms_params = generate_sms_param(prefixes=prefixes, broadcast=broadcast,
+                                                exists_phone_numbers=exists_phone_numbers)
                 exists_phone_numbers.append(sms_params.phone_number)
                 cache_time_out = (datetime.combine(broadcast.end_date, time(00, 00, 00)) - datetime.now()).seconds
                 cache.set(f'{broadcast.id}:{sms_params.phone_number}', sms_params.phone_number, timeout=cache_time_out)
@@ -49,7 +54,8 @@ def broadcast_task_handler():
         logger.info(f'total sms to send in task - {total_sms_sms_to_send}')
 
         if sms_tasks:
-            event_loop = asyncio.get_event_loop()
+            event_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(event_loop)
             sent_result = event_loop.run_until_complete(send_sms_pack(sms_tasks))
             handle_sent_result(broadcasts, sent_result)
     except Exception as err:
@@ -112,7 +118,6 @@ async def send_sms_pack(sms_tasks: list[BroadcastTask]) -> dict[int, list[int]]:
                 responses.extend([task.result() for task in done if not task.exception()])
                 pending_tasks = list(pending)
 
-            # logger.debug(f'send_sms_resp: {responses}')
         for resp in responses:
             broadcast_id, http_status_code = resp
             if broadcast_id not in result:
@@ -135,12 +140,6 @@ def handle_sent_result(broadcasts, sms_sent_results: dict[int, list[int]]):
         broadcast.sent_sms += accepted_sms_count
         broadcast.save()
 
-        if (broadcast.sent_sms >= broadcast.total_sms_count or
-                datetime.combine(broadcast.end_date - timedelta(days=1),
-                                 time(23, 59, 59)) < datetime.now()):
-            broadcast.is_active = False
-            broadcast.save()
-
 
 def is_phone_already_used(broadcast_id: int, phone_number: int) -> bool:
     if cache.get(f'{broadcast_id}:{phone_number}'):
@@ -148,3 +147,18 @@ def is_phone_already_used(broadcast_id: int, phone_number: int) -> bool:
         return True
 
     return False
+
+
+@task_postrun.connect(sender=broadcast_task_handler)
+def broadcast_after_run(**kwargs):
+    logger.debug('start execute post run signal')
+    broadcasts = Broadcast.objects.filter(
+        (Q(sent_sms=F('total_sms_count')) | Q(end_date__lte=datetime.now())),
+        is_active=True
+    ).all()
+
+    for broadcast in broadcasts:
+        broadcast.is_active = False
+        broadcast.save()
+        logger.info(f'set broadcast: {broadcast.id} inactive')
+    logger.debug('finished execute post  run signal')
