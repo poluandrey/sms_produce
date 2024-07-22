@@ -21,7 +21,6 @@ logger = logging.getLogger('app')
 
 @shared_task()
 def broadcast_task_handler():
-    sleep(5)
     logger.info('start')
     try:
         broadcasts = Broadcast.objects.prefetch_related('text').prefetch_related('sender').filter(
