@@ -83,7 +83,8 @@ def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_n
         channel_password=broadcast.channel_password,
         phone_number=phone_number,
         sender=sender.sender,
-        text=text.text,
+        # text=text.text,
+        text=text,
         broadcast_id=broadcast.id
     )
 
