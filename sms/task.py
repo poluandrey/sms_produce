@@ -64,8 +64,9 @@ def broadcast_task_handler():
 
 def generate_sms_param(prefixes: list[int], broadcast: Broadcast, exists_phone_numbers: list[int]) -> Optional[SmsParams]:
     prefix = random.choice(prefixes)
-    text = random.choice(broadcast.text.all())
+    # text = random.choice(broadcast.text.all())
     sender = random.choice(broadcast.sender.all())
+    text = f'{random.randint(100000, 999999)} is your {sender} verification code.'
     phone_number = broadcast.generate_phone_number(prefix)
     generation_cnt = 0
     while phone_number in exists_phone_numbers or is_phone_already_used(broadcast.id, phone_number):
