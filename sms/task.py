@@ -2,7 +2,6 @@ import asyncio
 import logging
 import random
 from datetime import datetime, time
-from time import sleep
 from typing import Coroutine, Optional
 
 import httpx

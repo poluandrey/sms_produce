@@ -67,7 +67,6 @@ class Broadcast(models.Model):
         return int(business_hours * 60 + business_minutes)
 
     def calculate_sms_count_to_send(self) -> int:
-        # end_of_broadcast = datetime.combine(self.end_date - timedelta(days=1), time=time(23, 59, 59))
         start_date = datetime.now()
         remain_run_count = self.calculate_remain_run_count(start_date=start_date)
         logger.info(f'broadcast {self.id}: from {start_date} to {self.end_date} remain {remain_run_count} runs')

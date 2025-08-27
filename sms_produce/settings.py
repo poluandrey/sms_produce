@@ -183,4 +183,11 @@ ALARIS_SMS_BASE_URL = env('ALARIS_SMS_BASE_URL')
 # LOGGER CONFIGURATION
 import logging.config
 
-logging.config.fileConfig(Path.joinpath(BASE_DIR, 'logger.conf'), disable_existing_loggers=False)
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+logging.config.fileConfig(
+    Path.joinpath(BASE_DIR, 'logging.ini'),
+    defaults={"logfilename": str(LOG_DIR / "app.log")},
+    disable_existing_loggers=False
+)

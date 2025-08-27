@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   sms_produce_database:
+    container_name: sms_produce_database
     image: postgres:15-alpine
     volumes:
      - .volumes/postgres:/var/lib/postgresql/data
@@ -20,13 +21,12 @@ services:
       - sms-network
 
   sms_produce_web:
+    container_name: sms_produce_web
     build:
       context: .
     depends_on:
       sms_produce_database:
         condition: service_healthy
-#      sms_produce_redis:
-#        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -35,22 +35,11 @@ services:
       - .volumes/logs:/app/logs/
       - ./static:/app/static
       - ./staticfiles:/app/staticfiles
-#    healthcheck:
-#      test: "curl --fail http://127.0.0.1:8000/healthcheck"
-#      interval: 60s
-#      timeout: 1s
-#      retries: 10
-#    command:
-#      - "gunicorn"
-#      - "--bind"
-#      - ":${APP_PORT}"
-#      - "--workers"
-#      - "${WORKER_COUNT}"
-#      - "sms_produce.wsgi:application"
     networks:
       - sms-network
 
   sms_produce_migration:
+    container_name: sms_produce_migration
     build:
       context: .
     depends_on:
@@ -63,6 +52,7 @@ services:
       - sms-network
 
   sms_produce_redis:
+    container_name: sms_produce_redis
     image: redis:latest
     ports:
       - '${REDIS_PORT}:${REDIS_PORT}'
@@ -78,6 +68,7 @@ services:
       - sms-network
 
   sms_produce_celery:
+    container_name: sms_produce_celery
     build: .
     command: poetry run celery --app=sms_produce worker --loglevel=info --logfile=/app/logs/celery_worker.log -P gevent
 #    depends_on:
@@ -90,6 +81,7 @@ services:
       - sms-network
 
   sms_produce_celery_beat:
+    container_name: sms_produce_celery_beat
     build: .
     command: poetry run celery --app=sms_produce beat --loglevel=info --logfile=logs/celery_worker.log --scheduler django_celery_beat.schedulers:DatabaseScheduler
 #    depends_on:

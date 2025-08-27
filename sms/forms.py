@@ -1,52 +1,112 @@
+# sms/forms.py
+import csv
+import io
+from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, FileField, ModelMultipleChoiceField
-from django.contrib.admin.widgets import AdminDateWidget
-from openpyxl.reader.excel import load_workbook
+from openpyxl import load_workbook
 
-from sms.models import Broadcast, Text, Sender
+from .models import Broadcast
 
 
-class AddBroadcastForm(ModelForm):
-    prefix_file = FileField(
+def _only_digits(s: str) -> str:
+    return ''.join(ch for ch in s if ch.isdigit())
+
+
+class AddBroadcastForm(forms.ModelForm):
+    # Доп. поле только для админки
+    prefix_file = forms.FileField(
+        required=False,
         label='Upload Prefix File',
-        help_text='Upload a CSV file containing prefixes.',
-        required=False
+        help_text='CSV/XLSX (один префикс в первой колонке, заголовок "prefix" допустим).'
     )
-    text = ModelMultipleChoiceField(queryset=Text.objects.all(), required=True)
-    sender = ModelMultipleChoiceField(queryset=Sender.objects.all(), required=True)
 
     class Meta:
         model = Broadcast
-        fields = [
-            'name',
-            'comment',
-            'is_active',
-            'start_date',
-            'end_date',
-            'phone_number_length',
-            'channel_login',
-            'channel_password',
-            'total_sms_count'
-        ]
-        widgets = {
-            'start_date': AdminDateWidget(),
-            'end_date': AdminDateWidget(),
-        }
+        fields = '__all__'
 
-    def clean(self):
-        cleaned_data = super(AddBroadcastForm, self).clean()
-        return cleaned_data
+    # Сюда положим разобранные префиксы, чтобы потом взять их в admin.save_related
+    parsed_prefixes: list[int] = []
 
     def clean_prefix_file(self):
-        prefix_file = self.cleaned_data.get('prefix_file')
-        if prefix_file:
-            try:
-                workbook = load_workbook(filename=prefix_file)
-                sheet = workbook.active
-                prefixes = [row[0] for row in sheet.iter_rows(min_row=2, max_col=1, values_only=True)]
-                self.cleaned_data['prefixes'] = prefixes
+        f = self.cleaned_data.get('prefix_file')
+        if not f:
+            return f
+        name = f.name.lower()
+        if not (name.endswith('.csv') or name.endswith('.xlsx') or name.endswith('.xls') or name.endswith('.txt')):
+            raise ValidationError('Поддерживаются файлы: .csv, .xlsx, .xls, .txt')
 
-            except Exception as e:
-                raise ValidationError(f'Error processing file: {e}')
+        return f
 
-        return prefix_file
+    def _parse_csv_or_txt(self, f) -> list[int]:
+        # читаем в память с попыткой UTF-8, потом cp1251
+        raw = f.read()
+        try:
+            text = raw.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            text = raw.decode('cp1251')
+        sio = io.StringIO(text)
+
+        # Попытаемся угадать разделитель
+        try:
+            sample = text.splitlines()[0]
+            dialect = csv.Sniffer().sniff(sample, delimiters=',;|\t')
+        except Exception:
+            dialect = csv.excel
+
+        reader = csv.reader(sio, dialect)
+        out: list[int] = []
+        for row in reader:
+            if not row:
+                continue
+            value = str(row[0]).strip()
+            if not value or value.lower() == 'prefix':
+                continue
+            value = _only_digits(value)
+            if value:
+                out.append(int(value))
+        return out
+
+    def _parse_xlsx(self, f) -> list[int]:
+        wb = load_workbook(filename=f, read_only=True, data_only=True)
+        ws = wb.active
+        out: list[int] = []
+        for row in ws.iter_rows(values_only=True):
+            if not row:
+                continue
+            cell = row[0]
+            if cell is None:
+                continue
+            value = str(cell).strip()
+            if not value or value.lower() == 'prefix':
+                continue
+            value = _only_digits(value)
+            if value:
+                out.append(int(value))
+        wb.close()
+        return out
+
+    def clean(self):
+        cleaned = super().clean()
+        f = cleaned.get('prefix_file')
+        self.parsed_prefixes = []
+        if f:
+            name = f.name.lower()
+            # NB: после чтения файл нельзя читать второй раз, поэтому парсим тут
+            if name.endswith(('.csv', '.txt')):
+                self.parsed_prefixes = self._parse_csv_or_txt(f)
+            else:
+                self.parsed_prefixes = self._parse_xlsx(f)
+
+            # удалим дубликаты, сохранив порядок
+            seen = set()
+            unique = []
+            for p in self.parsed_prefixes:
+                if p not in seen:
+                    seen.add(p)
+                    unique.append(p)
+            self.parsed_prefixes = unique
+
+            if not self.parsed_prefixes:
+                raise ValidationError({'prefix_file': 'Не найдено ни одного префикса.'})
+
+        return cleaned
